@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "customerlens": {
+      "command": "D:\\CustomerLens\\.venv\\Scripts\\python.exe",
+      "args": [
+        "D:\\CustomerLens\\mcp-server\\server.py"
+      ],
+      "env": {
+        "CUSTOMERLENS_ROOT": "D:\\CustomerLens"
+      }
+    }
+  }
+}
