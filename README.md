@@ -1,6 +1,6 @@
 # CustomerLens — Customer Segmentation Using K-Means and K-Medoids
 
-CustomerLens is a Data Mining and Data Warehousing (DMDW) OEP project that performs customer segmentation using clustering techniques.
+CustomerLens is a Data Mining and Data Warehousing (DMDW) OEP project that performs customer segmentation using unsupervised clustering techniques.
 
 The project implements:
 
@@ -13,8 +13,9 @@ The project implements:
 - Silhouette analysis
 - Davies-Bouldin evaluation
 - Customer cluster profiling
-- Income vs Spending Score visualization
+- Annual Income vs Spending Score visualization
 - Interactive Streamlit dashboard
+- React-based analytics frontend
 - Hypothetical customer cluster assignment
 - Automated validation tests
 
@@ -29,11 +30,11 @@ CustomerLens focuses on two primary clustering features:
 - Annual Income (k$)
 - Spending Score (1-100)
 
-The objective is to identify meaningful customer groups and compare the performance of K-Means and K-Medoids clustering.
+The objective is to identify meaningful customer groups and compare K-Means and K-Medoids clustering on the same customer dataset.
 
 The project uses the Mall Customer Segmentation dataset containing 200 customer records.
 
-> **Note:** Spending Score is a behavioral score provided in the dataset and should not be interpreted as raw monetary spending.
+> **Dataset note:** Spending Score is a behavioral score provided in the dataset and should not be interpreted as raw monetary spending.
 
 ---
 
@@ -43,7 +44,7 @@ Businesses often have customers with different income levels and purchasing beha
 
 Treating all customers as one homogeneous group can make marketing and customer-management decisions less effective.
 
-CustomerLens addresses this problem by applying unsupervised clustering techniques to identify customer segments based on Annual Income and Spending Score.
+CustomerLens addresses this problem by applying unsupervised clustering techniques to identify customer segments based primarily on Annual Income and Spending Score.
 
 ---
 
@@ -51,22 +52,24 @@ CustomerLens addresses this problem by applying unsupervised clustering techniqu
 
 The main objectives are:
 
-1. Perform data preprocessing and quality analysis.
+1. Perform data preprocessing and data-quality analysis.
 2. Explore customer characteristics using EDA.
-3. Scale the clustering features.
-4. Determine a suitable number of clusters.
-5. Implement K-Means clustering.
-6. Implement K-Medoids clustering using PAM.
-7. Compare the clustering algorithms.
-8. Visualize customer segments.
-9. Profile the resulting customer groups.
-10. Provide an interactive dashboard for analysis.
+3. Select appropriate clustering features.
+4. Standardize the clustering features.
+5. Determine a suitable number of clusters using K evaluation techniques.
+6. Implement K-Means clustering.
+7. Implement K-Medoids clustering using the PAM approach.
+8. Compare the clustering algorithms using clustering-quality metrics.
+9. Create a 2D Annual Income vs Spending Score scatter plot with color-coded clusters.
+10. Profile the resulting customer groups.
+11. Provide descriptive business interpretations of the clusters.
+12. Provide interactive interfaces for exploring the clustering results.
 
 ---
 
 ## 4. Dataset
 
-The project uses the Mall Customer Segmentation dataset.
+The project uses the **Mall Customer Segmentation dataset**.
 
 ### Dataset Size
 
@@ -92,9 +95,13 @@ Annual Income (k$)
 Spending Score (1-100)
 ```
 
-CustomerID is excluded because it is an identifier rather than a behavioral feature.
+`CustomerID` is excluded because it is an identifier rather than a meaningful behavioral feature.
 
-Gender and Age are retained for post-clustering profiling and interpretation.
+`Gender` and `Age` are retained for post-clustering profiling and interpretation rather than being used as the primary clustering dimensions.
+
+### Dataset Selection
+
+The assignment permits the use of the Yasserh customer segmentation dataset. CustomerLens uses the Mall Customer Segmentation dataset because it directly contains both **Annual Income** and **Spending Score**, which are required for the project's primary 2D visualization and clustering analysis.
 
 ---
 
@@ -104,37 +111,37 @@ The project follows this workflow:
 
 ```text
 Dataset
-   â†“
+   ↓
 Data Audit
-   â†“
+   ↓
 Preprocessing
-   â†“
+   ↓
 Feature Selection
-   â†“
+   ↓
 StandardScaler
-   â†“
+   ↓
 Optimal K Analysis
-   â†“
+   ↓
 K-Means + K-Medoids
-   â†“
+   ↓
 Cluster Evaluation
-   â†“
+   ↓
 Cluster Profiling
-   â†“
+   ↓
 Visualization
-   â†“
+   ↓
 Business Insights
-   â†“
-Interactive Dashboard
+   ↓
+Interactive Interfaces
 ```
 
 ---
 
 ## 6. Preprocessing
 
-The clustering features are standardized using `StandardScaler`.
+The primary clustering features are standardized using `StandardScaler`.
 
-This is necessary because clustering algorithms are distance-based and the two features can have different numerical scales.
+This is important because the clustering algorithms rely on distance calculations and numerical variables should be placed on comparable scales.
 
 The transformed feature matrix is used for both K-Means and K-Medoids.
 
@@ -144,17 +151,19 @@ No train-test split is used because this is an unsupervised clustering problem r
 
 ## 7. Optimal Number of Clusters
 
-Values of K from 2 through 10 were evaluated.
-
-The project evaluates:
+Values of `K` from 2 through 10 were evaluated.
 
 ### K-Means
+
+The following measures were evaluated:
 
 - Inertia
 - Silhouette Score
 - Davies-Bouldin Index
 
 ### K-Medoids
+
+The following measures were evaluated:
 
 - Medoid Cost
 - Silhouette Score
@@ -174,7 +183,7 @@ K = 5
 
 ### K-Means
 
-Silhouette Score at K=5:
+Silhouette Score:
 
 ```text
 0.554657
@@ -188,7 +197,7 @@ Davies-Bouldin Index:
 
 ### K-Medoids
 
-Silhouette Score at K=5:
+Silhouette Score:
 
 ```text
 0.556218
@@ -200,7 +209,7 @@ Davies-Bouldin Index:
 0.566089
 ```
 
-Therefore, K=5 is used for the final clustering models.
+Therefore, `K = 5` is used for the final clustering models.
 
 ---
 
@@ -213,11 +222,11 @@ Therefore, K=5 is used for the final clustering models.
 | Davies-Bouldin Index | 0.572236 | 0.566089 |
 | Runtime* | 0.164474 s | 0.076011 s |
 
-\*Runtime values are specific to the implemented experiment and hardware/run and should not be interpreted as a general statement that K-Medoids is faster than K-Means.
+\* Runtime values are specific to the implemented experiment, execution environment, and particular run. They should not be interpreted as a general statement that K-Medoids is faster than K-Means.
 
-K-Medoids achieved a slightly higher Silhouette Score and slightly lower Davies-Bouldin Index for this dataset.
+For this dataset and experiment, K-Medoids achieved a slightly higher Silhouette Score and slightly lower Davies-Bouldin Index than K-Means.
 
-The difference is small, so the results indicate that both algorithms provide strong and highly similar segmentation.
+The differences are small, indicating that both algorithms produce strong and highly similar segmentation results.
 
 ---
 
@@ -225,19 +234,19 @@ The difference is small, so the results indicate that both algorithms provide st
 
 ### Silhouette Score
 
-The Silhouette Score measures how similar an object is to its own cluster compared with other clusters.
+The Silhouette Score measures how similar an observation is to its own cluster compared with other clusters.
 
-Higher values indicate better-separated and more cohesive clusters.
+Higher values generally indicate better cluster cohesion and separation.
 
 ### Davies-Bouldin Index
 
 The Davies-Bouldin Index evaluates the similarity between clusters.
 
-Lower values indicate better clustering quality.
+Lower values generally indicate better clustering quality.
 
 ### Adjusted Rand Index
 
-An Adjusted Rand Index was also calculated to compare the two resulting partitions.
+An Adjusted Rand Index (ARI) was calculated to compare the two resulting cluster partitions.
 
 The measured ARI was:
 
@@ -247,13 +256,13 @@ The measured ARI was:
 
 This indicates very high agreement between the K-Means and K-Medoids cluster assignments.
 
-ARI is a comparison metric between partitions and is not clustering accuracy.
+ARI is a comparison metric between partitions and should not be interpreted as clustering accuracy.
 
 ---
 
 ## 11. K-Means
 
-K-Means partitions customers into K groups by assigning each customer to the nearest centroid and iteratively updating the centroids.
+K-Means partitions customers into `K` groups by assigning observations to cluster centroids and iteratively updating those centroids.
 
 The final model uses:
 
@@ -261,7 +270,7 @@ The final model uses:
 K = 5
 ```
 
-The trained model is stored in:
+The trained model is stored at:
 
 ```text
 artifacts/models/kmeans_k5.joblib
@@ -273,7 +282,7 @@ artifacts/models/kmeans_k5.joblib
 
 K-Medoids is a partitioning clustering method similar to K-Means but uses actual observations as cluster representatives called medoids.
 
-CustomerLens implements the PAM-style approach manually using NumPy and pairwise Euclidean distances.
+CustomerLens implements the PAM-style approach using NumPy and pairwise Euclidean distances.
 
 The final model uses:
 
@@ -281,7 +290,7 @@ The final model uses:
 K = 5
 ```
 
-The saved model information is stored in:
+The saved model information is stored at:
 
 ```text
 artifacts/models/kmedoids_pam_k5.joblib
@@ -307,34 +316,40 @@ Customers are color-coded according to their cluster assignment.
 
 The dashboard also displays the appropriate cluster representative:
 
-- K-Means â†’ Centroid
-- K-Medoids â†’ Medoid
+- K-Means → Centroid
+- K-Medoids → Medoid
+
+The visualization allows the resulting customer groups to be examined in the original income and spending-score feature space.
 
 ---
 
-## 14. Interactive Dashboard
+## 14. Interactive Applications
 
-CustomerLens includes a Streamlit dashboard with the following sections:
+CustomerLens provides two interfaces for exploring the validated clustering results.
 
-### ðŸ  Overview
+### 14.1 Streamlit Dashboard
 
-Provides a high-level summary of the dataset, models, and project configuration.
+The Streamlit dashboard provides the following sections:
 
-### ðŸ“Š Data Quality & EDA
+#### Overview
+
+Provides a high-level summary of the dataset, models, metrics, and project configuration.
+
+#### Data Quality & EDA
 
 Provides:
 
 - Dataset statistics
 - Missing-value analysis
 - Feature distributions
-- Correlation analysis
 - Exploratory visualizations
+- Descriptive statistics
 
-### ðŸ“ Optimal K
+#### Optimal K
 
 Displays the evaluation of K values from 2 to 10 using clustering-quality metrics.
 
-### ðŸŽ¯ Cluster Explorer
+#### Cluster Explorer
 
 Allows users to inspect individual clusters and view:
 
@@ -345,30 +360,66 @@ Allows users to inspect individual clusters and view:
 - Customer records
 - Centroids or medoids
 
-### âš–ï¸ Algorithm Comparison
+#### Algorithm Comparison
 
 Compares K-Means and K-Medoids using:
 
 - Silhouette Score
 - Davies-Bouldin Index
 - Runtime
-- Cluster sizes
+- Cluster characteristics
 - Adjusted Rand Index
 
-### ðŸ’¡ Business Insights
+#### Business Insights
 
 Provides cluster profiles and descriptive segment interpretations.
 
-### ðŸ”® Customer Explorer
+#### Customer Explorer
 
 Allows a hypothetical customer to be entered using:
 
 - Annual Income
 - Spending Score
 
-The application then assigns the customer to the nearest existing cluster.
+The application assigns the hypothetical customer to the nearest existing cluster.
 
-This is a cluster-assignment tool, not a spending prediction model.
+This is a cluster-assignment tool and is **not** a spending prediction model.
+
+---
+
+### 14.2 React Frontend
+
+CustomerLens also includes a React-based analytics frontend.
+
+The frontend provides:
+
+- Overview
+- Data Quality
+- Optimal K
+- Cluster Explorer
+- Algorithm Comparison
+- Business Insights
+- Customer Explorer
+
+The React application consumes validated project results exported from the Python artifacts.
+
+The frontend does not independently retrain the clustering models.
+
+The data flow is:
+
+```text
+Python Analysis
+      ↓
+Saved CSV Results
+      ↓
+export_frontend_data.py
+      ↓
+frontend/public/data/customerlens.json
+      ↓
+React Frontend
+```
+
+This keeps the frontend visualization consistent with the validated Python analysis.
 
 ---
 
@@ -376,49 +427,70 @@ This is a cluster-assignment tool, not a spending prediction model.
 
 ```text
 CustomerLens/
-â”‚
-â”œâ”€â”€ app.py
-â”œâ”€â”€ README.md
-â”œâ”€â”€ requirements.txt
-â”œâ”€â”€ .gitignore
-â”‚
-â”œâ”€â”€ data/
-â”‚   â”œâ”€â”€ raw/
-â”‚   â”‚   â””â”€â”€ Mall_Customers.csv
-â”‚   â””â”€â”€ processed/
-â”‚       â””â”€â”€ customerlens_final.csv
-â”‚
-â”œâ”€â”€ src/
-â”‚   â”œâ”€â”€ __init__.py
-â”‚   â”œâ”€â”€ data_loader.py
-â”‚   â”œâ”€â”€ preprocessing.py
-â”‚   â”œâ”€â”€ eda.py
-â”‚   â”œâ”€â”€ optimal_k.py
-â”‚   â”œâ”€â”€ kmeans_model.py
-â”‚   â”œâ”€â”€ kmedoids_pam.py
-â”‚   â”œâ”€â”€ evaluation.py
-â”‚   â”œâ”€â”€ profiling.py
-â”‚   â””â”€â”€ visualizations.py
-â”‚
-â”œâ”€â”€ notebooks/
-â”‚   â”œâ”€â”€ 01_data_audit_and_eda.ipynb
-â”‚   â””â”€â”€ 02_clustering_experiments.ipynb
-â”‚
-â”œâ”€â”€ artifacts/
-â”‚   â”œâ”€â”€ models/
-â”‚   â”‚   â”œâ”€â”€ scaler.joblib
-â”‚   â”‚   â”œâ”€â”€ kmeans_k5.joblib
-â”‚   â”‚   â”œâ”€â”€ kmedoids_pam_k5.joblib
-â”‚   â”‚   â””â”€â”€ feature_config.joblib
-â”‚   â”‚
-â”‚   â”œâ”€â”€ results/
-â”‚   â”‚   â”œâ”€â”€ kmeans_optimal_k_results.csv
-â”‚   â”‚   â””â”€â”€ kmedoids_optimal_k_results.csv
-â”‚   â”‚
-â”‚   â””â”€â”€ figures/
-â”‚
-â””â”€â”€ tests/
-    â””â”€â”€ test_clustering.py
+│
+├── app.py
+├── README.md
+├── requirements.txt
+├── .gitignore
+├── export_frontend_data.py
+│
+├── data/
+│   ├── raw/
+│   │   └── Mall_Customers.csv
+│   │
+│   └── processed/
+│       ├── clustering_features_scaled.csv
+│       ├── customerlens_final.csv
+│       ├── customers_audited.csv
+│       ├── customers_with_cluster_assignments.csv
+│       └── final_customer_segmentation.csv
+│
+├── artifacts/
+│   ├── models/
+│   │   ├── feature_config.joblib
+│   │   ├── kmeans_k5.joblib
+│   │   ├── kmedoids_pam_k5.joblib
+│   │   └── scaler.joblib
+│   │
+│   ├── results/
+│   │   ├── cluster_assignment_comparison.csv
+│   │   ├── final_algorithm_comparison.csv
+│   │   ├── final_business_segment_profile.csv
+│   │   ├── kmeans_cluster_profiles.csv
+│   │   ├── kmeans_optimal_k_results.csv
+│   │   ├── kmedoids_cluster_profiles.csv
+│   │   ├── kmedoids_optimal_k_results.csv
+│   │   └── segment_business_insights.csv
+│   │
+│   └── figures/
+│       └── kmeans_customer_segmentation.png
+│
+├── frontend/
+│   ├── public/
+│   │   └── data/
+│   │       └── customerlens.json
+│   │
+│   ├── src/
+│   │   ├── components/
+│   │   ├── data/
+│   │   ├── hooks/
+│   │   ├── lib/
+│   │   ├── pages/
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   └── main.tsx
+│   │
+│   ├── package.json
+│   └── vite.config.ts
+│
+├── notebooks/
+│   └── 01_data_audit_and_eda.ipynb
+│
+├── src/
+│   └── __init__.py
+│
+└── tests/
+    └── test_clustering.py
 ```
 
 ---
@@ -427,7 +499,7 @@ CustomerLens/
 
 Clone the repository and enter the project directory.
 
-Create a virtual environment:
+Create a Python virtual environment:
 
 ```bash
 python -m venv .venv
@@ -439,15 +511,29 @@ Activate it on Windows:
 .venv\Scripts\Activate.ps1
 ```
 
-Install dependencies:
+Install Python dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
+### Frontend dependencies
+
+Enter the frontend directory:
+
+```powershell
+cd frontend
+```
+
+Install Node.js dependencies:
+
+```powershell
+npm install
+```
+
 ---
 
-## 17. Running the Dashboard
+## 17. Running the Streamlit Dashboard
 
 From the project root:
 
@@ -455,11 +541,47 @@ From the project root:
 streamlit run app.py
 ```
 
-The application will open in the browser.
+The Streamlit application will open in the browser.
 
 ---
 
-## 18. Running Tests
+## 18. Running the React Frontend
+
+From the project root:
+
+```powershell
+npm --prefix frontend run dev
+```
+
+The Vite development server will start and display its local URL in the terminal.
+
+For a production build:
+
+```powershell
+npm --prefix frontend run build
+```
+
+---
+
+## 19. Updating Frontend Data
+
+The React frontend consumes the generated file:
+
+```text
+frontend/public/data/customerlens.json
+```
+
+To regenerate this file from the current Python results:
+
+```powershell
+python export_frontend_data.py
+```
+
+The exporter reads the validated project artifacts and creates the frontend JSON dataset.
+
+---
+
+## 20. Running Tests
 
 CustomerLens includes automated validation tests.
 
@@ -486,35 +608,53 @@ The tests verify:
 - K-Means customer assignment
 - K-Medoids customer assignment
 
+The frontend was additionally validated with:
+
+```powershell
+npm --prefix frontend run build
+```
+
+and:
+
+```powershell
+npm --prefix frontend run lint
+```
+
+Both completed successfully in the validated project state.
+
 ---
 
-## 19. Reproducibility
+## 21. Reproducibility
 
-The project stores the following artifacts:
+The project stores validated models, preprocessing artifacts, evaluation results, processed datasets, and frontend data.
+
+Important locations include:
 
 ```text
 artifacts/models/
 artifacts/results/
 data/processed/
+frontend/public/data/customerlens.json
 ```
 
-The saved scaler, clustering models, configuration, and evaluation results allow the Streamlit dashboard to reproduce the validated project results without retraining every time.
+The saved scaler, clustering models, configuration, evaluation results, and exported frontend data allow the applications to display the validated project results without retraining the models every time.
 
 ---
 
-## 20. Limitations
+## 22. Limitations
 
 1. The dataset contains only 200 customers.
-2. The clustering analysis uses only Annual Income and Spending Score as primary clustering features.
+2. The primary clustering analysis uses only Annual Income and Spending Score.
 3. Spending Score is a behavioral score rather than a direct monetary spending measurement.
 4. Cluster labels do not represent predefined customer categories.
-5. The descriptive segment names are interpretations derived from cluster statistics.
+5. Descriptive business segment names are interpretations derived from cluster statistics.
 6. Results may differ when applied to another dataset or customer population.
 7. Runtime comparisons are specific to the implementation and execution environment.
+8. The dataset is suitable for demonstrating clustering methodology but is not necessarily representative of a real-world customer population.
 
 ---
 
-## 21. Academic Relevance
+## 23. Academic Relevance
 
 The project directly demonstrates important DMDW concepts:
 
@@ -529,22 +669,27 @@ The project directly demonstrates important DMDW concepts:
 - Cluster evaluation
 - Data visualization
 - Cluster profiling
+- Data-driven customer segmentation
+
+The project therefore provides a practical implementation of clustering concepts covered in the DMDW curriculum.
 
 ---
 
-## 22. Conclusion
+## 24. Conclusion
 
 CustomerLens successfully applies K-Means and K-Medoids clustering to customer segmentation using Annual Income and Spending Score.
 
-Both algorithms identified five meaningful customer groups, with K=5 supported by the evaluated clustering-quality metrics.
+Both algorithms identified five customer groups, with `K = 5` supported by the evaluated clustering-quality metrics.
 
-For the final K=5 models, K-Medoids achieved a slightly higher Silhouette Score and slightly lower Davies-Bouldin Index than K-Means. The high Adjusted Rand Index also indicates strong agreement between the two clustering solutions.
+For the final K=5 models, K-Medoids achieved a slightly higher Silhouette Score and slightly lower Davies-Bouldin Index than K-Means for this dataset and experiment. The high Adjusted Rand Index of `0.9597` also indicates strong agreement between the two clustering solutions.
 
-The resulting Streamlit application provides an interactive environment for exploring customer segments, comparing clustering algorithms, understanding cluster characteristics, and assigning hypothetical customers to existing segments.
+The resulting applications provide interactive environments for exploring customer segments, comparing clustering algorithms, understanding cluster characteristics, visualizing the Income vs Spending Score relationship, and assigning hypothetical customers to existing clusters.
 
 ---
 
-## 23. Technologies Used
+## 25. Technologies Used
+
+### Data Science / Machine Learning
 
 - Python
 - Pandas
@@ -552,17 +697,37 @@ The resulting Streamlit application provides an interactive environment for expl
 - Scikit-learn
 - Matplotlib
 - Seaborn
-- Streamlit
 - Joblib
 - Jupyter Notebook
+
+### Applications
+
+- Streamlit
+- React
+- Vite
+- TypeScript
+- Tailwind CSS
+- Recharts
+- Lucide React
+- Base UI
+
+### Development / Testing
+
 - Pytest
+- ESLint
 - Git
+- GitHub
 
 ---
 
-## 24. Project Type
+## 26. Project Type
 
 **Academic Project — Data Mining and Data Warehousing (DMDW) OEP**
 
-**Project:** CustomerLens  
-**Focus:** Customer Segmentation using Clustering
+**Project:** CustomerLens
+
+**Focus:** Customer Segmentation Using Clustering
+
+**Primary Algorithms:** K-Means and K-Medoids (PAM)
+
+**Optimal K:** 5
