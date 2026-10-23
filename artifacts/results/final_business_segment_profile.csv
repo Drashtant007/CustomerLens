@@ -1,0 +1,6 @@
+KMeans_Cluster,KMeans_Segment,Customers,Avg_Age,Avg_Income,Avg_Spending,Percentage
+0,Balanced / Moderate Customers,81,42.72,55.3,49.52,40.5
+1,High-Value Customers,39,32.69,86.54,82.13,19.5
+2,High-Spending Budget Customers,22,25.27,25.73,79.36,11.0
+3,High-Income Low-Spending Customers,35,41.11,88.2,17.11,17.5
+4,Low-Engagement Customers,23,45.22,26.3,20.91,11.5

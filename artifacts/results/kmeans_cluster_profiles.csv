@@ -1,0 +1,6 @@
+KMeans_Cluster,Customers,Avg_Age,Median_Age,Avg_Income,Median_Income,Avg_Spending,Median_Spending,Percentage,Segment_Type
+0,81,42.72,46.0,55.3,54.0,49.52,50.0,40.5,Low Income - Low Spending
+1,39,32.69,32.0,86.54,79.0,82.13,83.0,19.5,High Income - High Spending
+2,22,25.27,23.5,25.73,24.5,79.36,77.0,11.0,Low Income - High Spending
+3,35,41.11,42.0,88.2,85.0,17.11,16.0,17.5,High Income - Low Spending
+4,23,45.22,46.0,26.3,25.0,20.91,17.0,11.5,Low Income - Low Spending
