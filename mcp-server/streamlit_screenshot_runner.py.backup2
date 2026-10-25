@@ -1,0 +1,395 @@
+﻿from __future__ import annotations
+
+import sys
+import time
+from pathlib import Path
+
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+BASE_URL = "http://127.0.0.1:8501"
+
+OUTPUT_DIR = ROOT / "artifacts" / "screenshots" / "streamlit"
+
+VIEWS = [
+    ("01_overview", "Overview"),
+    ("02_data_quality", "Data Quality & EDA"),
+    ("03_optimal_k", "Optimal K"),
+    ("04_cluster_explorer", "Cluster Explorer"),
+    ("05_algorithm_comparison", "Algorithm Comparison"),
+    ("06_business_insights", "Business Insights"),
+    ("07_customer_explorer", "Customer Explorer"),
+]
+
+
+def wait_for_streamlit(page):
+    """Wait for Streamlit to finish rendering."""
+    try:
+        page.wait_for_selector(
+            '[data-testid="stAppViewContainer"]',
+            timeout=15000,
+        )
+    except PlaywrightTimeoutError:
+        pass
+
+    page.wait_for_timeout(2500)
+
+
+def click_navigation(page, label: str):
+    """
+    Click the actual Streamlit radio navigation item.
+
+    Using get_by_text() is unreliable because Streamlit creates
+    hidden duplicate/help elements in the DOM.
+    """
+
+    print(f"  Selecting navigation: {label}")
+
+    # Preferred method: Streamlit radio buttons.
+    radio = page.get_by_role("radio", name=label)
+
+    try:
+        radio.wait_for(state="visible", timeout=10000)
+        radio.click(force=True)
+        page.wait_for_timeout(1800)
+        return True
+    except PlaywrightTimeoutError:
+        pass
+
+    # Fallback: search specifically inside sidebar.
+    sidebar = page.locator('[data-testid="stSidebar"]')
+
+    try:
+        sidebar.get_by_text(label, exact=True).first.click(force=True)
+        page.wait_for_timeout(1800)
+        return True
+    except Exception:
+        return False
+
+
+def find_scrollable_containers(page):
+    """
+    Find Streamlit elements that actually own the scroll position.
+
+    Streamlit can use nested scroll containers rather than the
+    document itself.
+    """
+
+    return page.evaluate(
+        """
+        () => {
+            const result = [];
+
+            for (const el of document.querySelectorAll('*')) {
+                const style = window.getComputedStyle(el);
+
+                const scrollableY =
+                    (style.overflowY === 'auto' ||
+                     style.overflowY === 'scroll') &&
+                    el.scrollHeight > el.clientHeight + 50;
+
+                if (scrollableY) {
+                    result.push({
+                        tag: el.tagName,
+                        id: el.id || '',
+                        className:
+                            typeof el.className === 'string'
+                                ? el.className
+                                : '',
+                        scrollHeight: el.scrollHeight,
+                        clientHeight: el.clientHeight
+                    });
+                }
+            }
+
+            return result;
+        }
+        """
+    )
+
+
+def scroll_streamlit_content(page):
+    """
+    Scroll all relevant Streamlit scroll containers progressively.
+
+    This forces Streamlit/Plotly/chart content farther down the page
+    to render before the screenshot is taken.
+    """
+
+    print("  Detecting scroll containers...")
+
+    containers = find_scrollable_containers(page)
+
+    print(f"  Found {len(containers)} scrollable container(s).")
+
+    # First scroll the normal document.
+    page.evaluate(
+        """
+        () => {
+            window.scrollTo(0, 0);
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        }
+        """
+    )
+
+    page.wait_for_timeout(500)
+
+    # Scroll document progressively.
+    for _ in range(12):
+        page.evaluate(
+            """
+            () => {
+                window.scrollBy(0, Math.max(500, window.innerHeight * 0.75));
+            }
+            """
+        )
+        page.wait_for_timeout(350)
+
+    # Now scroll every detected internal container.
+    for index in range(len(containers)):
+
+        print(f"  Scrolling internal container {index + 1}/{len(containers)}...")
+
+        for _ in range(15):
+            page.evaluate(
+                """
+                (index) => {
+                    const candidates = [];
+
+                    for (const el of document.querySelectorAll('*')) {
+                        const style = window.getComputedStyle(el);
+
+                        const scrollable =
+                            (style.overflowY === 'auto' ||
+                             style.overflowY === 'scroll') &&
+                            el.scrollHeight > el.clientHeight + 50;
+
+                        if (scrollable) {
+                            candidates.push(el);
+                        }
+                    }
+
+                    const el = candidates[index];
+
+                    if (el) {
+                        el.scrollTop += Math.max(
+                            500,
+                            el.clientHeight * 0.75
+                        );
+                    }
+                }
+                """,
+                index,
+            )
+
+            page.wait_for_timeout(300)
+
+    # Return to top before capturing.
+    page.evaluate(
+        """
+        () => {
+            window.scrollTo(0, 0);
+
+            for (const el of document.querySelectorAll('*')) {
+                const style = window.getComputedStyle(el);
+
+                if (
+                    (style.overflowY === 'auto' ||
+                     style.overflowY === 'scroll') &&
+                    el.scrollHeight > el.clientHeight + 50
+                ) {
+                    el.scrollTop = 0;
+                }
+            }
+        }
+        """
+    )
+
+    page.wait_for_timeout(1200)
+
+
+def calculate_page_height(page):
+    """
+    Determine the largest relevant height available in the page.
+    """
+
+    result = page.evaluate(
+        """
+        () => {
+            const heights = [
+                document.documentElement.scrollHeight,
+                document.body.scrollHeight,
+                document.documentElement.offsetHeight,
+                document.body.offsetHeight
+            ];
+
+            for (const el of document.querySelectorAll('*')) {
+                if (el.scrollHeight > 0) {
+                    heights.push(el.scrollHeight);
+                }
+            }
+
+            return Math.max(...heights);
+        }
+        """
+    )
+
+    return int(result)
+
+
+def capture_full_page(page, output_file: Path):
+    """
+    Capture a real full-page Streamlit screenshot.
+
+    We temporarily enlarge the viewport to the detected content height.
+    This avoids Streamlit's internal scrolling limitation.
+    """
+
+    height = calculate_page_height(page)
+
+    # Keep screenshot sizes sane while still allowing long pages.
+    height = max(1000, min(height, 20000))
+
+    print(f"  Calculated content height: {height}px")
+
+    page.set_viewport_size(
+        {
+            "width": 1600,
+            "height": height,
+        }
+    )
+
+    page.wait_for_timeout(1500)
+
+    # Force another rendering pass after resizing.
+    page.evaluate(
+        """
+        () => {
+            window.scrollTo(0, 0);
+        }
+        """
+    )
+
+    page.wait_for_timeout(1000)
+
+    page.screenshot(
+        path=str(output_file),
+        full_page=False,
+    )
+
+    return height
+
+
+def capture_screenshots() -> int:
+
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    print("=" * 64)
+    print("CustomerLens Streamlit FULL-PAGE Screenshot Capture")
+    print("=" * 64)
+    print(f"URL: {BASE_URL}")
+    print(f"Output: {OUTPUT_DIR}")
+    print()
+
+    captured = 0
+
+    with sync_playwright() as playwright:
+
+        browser = playwright.chromium.launch(
+            headless=True
+        )
+
+        context = browser.new_context(
+            viewport={
+                "width": 1600,
+                "height": 1000,
+            },
+            device_scale_factor=1,
+        )
+
+        page = context.new_page()
+
+        print("Opening Streamlit application...")
+
+        try:
+            page.goto(
+                BASE_URL,
+                wait_until="domcontentloaded",
+                timeout=30000,
+            )
+        except Exception as exc:
+            print(f"ERROR opening Streamlit: {exc}")
+            browser.close()
+            return 1
+
+        wait_for_streamlit(page)
+
+        for index, (filename, label) in enumerate(VIEWS, start=1):
+
+            print()
+            print(f"[{index}/{len(VIEWS)}] {label}")
+
+            try:
+
+                if not click_navigation(page, label):
+                    print(f"  ✗ Could not select navigation: {label}")
+                    continue
+
+                print("  ✓ Navigation selected")
+
+                wait_for_streamlit(page)
+
+                # Allow charts/tables/images to finish rendering.
+                page.wait_for_timeout(1500)
+
+                print("  Scrolling page to trigger full rendering...")
+
+                scroll_streamlit_content(page)
+
+                print("  ✓ Full content rendered")
+
+                output_file = OUTPUT_DIR / f"{filename}.png"
+
+                height = capture_full_page(
+                    page,
+                    output_file,
+                )
+
+                if output_file.exists():
+
+                    size = output_file.stat().st_size
+
+                    print(
+                        f"  ✓ Captured: {output_file}"
+                    )
+
+                    print(
+                        f"    Size: {size:,} bytes"
+                    )
+
+                    print(
+                        f"    Height: {height}px"
+                    )
+
+                    captured += 1
+
+            except Exception as exc:
+
+                print(f"  ✗ FAILED: {label}")
+                print(f"    {type(exc).__name__}: {exc}")
+
+        browser.close()
+
+    print()
+    print("=" * 64)
+    print(f"Captured: {captured}/{len(VIEWS)}")
+    print("=" * 64)
+
+    return 0 if captured == len(VIEWS) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(capture_screenshots())

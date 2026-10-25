@@ -5,10 +5,14 @@ import json
 import os
 import subprocess
 import sys
+import time
+import urllib.request
 from pathlib import Path
 from typing import Any
 
 from mcp.server import MCPServer
+
+from screenshot_runner import capture_screenshots
 
 
 # ============================================================
@@ -400,6 +404,156 @@ def final_audit() -> dict[str, Any]:
 # ============================================================
 # SERVER ENTRY POINT
 # ============================================================
+
+
+@mcp.tool()
+def capture_dashboard_screenshot() -> dict[str, Any]:
+    """
+    Capture all seven CustomerLens React dashboard views using Playwright.
+
+    If the Vite frontend is already running on port 5173, it is reused.
+    Otherwise, the tool starts Vite, captures the screenshots, and stops
+    the process it started.
+
+    Screenshots are saved under:
+        artifacts/screenshots/
+    """
+
+    root = ROOT
+    frontend_dir = root / "frontend"
+    screenshot_dir = root / "artifacts" / "screenshots"
+
+    if not frontend_dir.exists():
+        return {
+            "status": "error",
+            "message": f"Frontend directory not found: {frontend_dir}",
+        }
+
+    screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+    vite_process = None
+    started_vite = False
+
+    def frontend_is_ready() -> bool:
+        try:
+            with urllib.request.urlopen(
+                "http://127.0.0.1:5173/",
+                timeout=2,
+            ) as response:
+                return response.status == 200
+        except Exception:
+            return False
+
+    try:
+        # --------------------------------------------------------
+        # Check whether Vite is already running.
+        # --------------------------------------------------------
+        if not frontend_is_ready():
+            print("Vite is not running. Starting CustomerLens frontend...")
+
+            npm_command = "npm.cmd" if os.name == "nt" else "npm"
+
+            vite_process = subprocess.Popen(
+                [
+                    npm_command,
+                    "run",
+                    "dev",
+                    "--",
+                    "--host",
+                    "127.0.0.1",
+                ],
+                cwd=str(frontend_dir),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+
+            started_vite = True
+
+            # ----------------------------------------------------
+            # Wait up to 30 seconds for Vite.
+            # ----------------------------------------------------
+            deadline = time.time() + 30
+
+            while time.time() < deadline:
+                if frontend_is_ready():
+                    break
+
+                if vite_process.poll() is not None:
+                    output = ""
+
+                    if vite_process.stdout:
+                        output = vite_process.stdout.read()
+
+                    return {
+                        "status": "error",
+                        "message": "Vite exited before becoming ready.",
+                        "vite_output": output[-4000:],
+                    }
+
+                time.sleep(0.5)
+
+            if not frontend_is_ready():
+                return {
+                    "status": "error",
+                    "message": (
+                        "Vite did not become available on "
+                        "http://127.0.0.1:5173 within 30 seconds."
+                    ),
+                }
+
+        else:
+            print("Vite is already running on port 5173.")
+
+        # --------------------------------------------------------
+        # Run Playwright screenshot capture.
+        # --------------------------------------------------------
+        result_code = capture_screenshots()
+
+        screenshots = sorted(
+            str(path.relative_to(root)).replace("\\", "/")
+            for path in screenshot_dir.glob("*.png")
+        )
+
+        if result_code != 0:
+            return {
+                "status": "error",
+                "captured": len(screenshots),
+                "screenshots": screenshots,
+                "message": "Screenshot capture completed with failures.",
+            }
+
+        return {
+            "status": "success",
+            "captured": len(screenshots),
+            "screenshots": screenshots,
+            "frontend_url": "http://127.0.0.1:5173",
+        }
+
+    except Exception as exc:
+        return {
+            "status": "error",
+            "message": str(exc),
+        }
+
+    finally:
+        # --------------------------------------------------------
+        # Only stop Vite if this tool started it.
+        # --------------------------------------------------------
+        if started_vite and vite_process is not None:
+            print("Stopping Vite process started by MCP...")
+
+            try:
+                vite_process.terminate()
+                vite_process.wait(timeout=5)
+            except Exception:
+                try:
+                    vite_process.kill()
+                except Exception:
+                    pass
+
 
 if __name__ == "__main__":
     mcp.run()
