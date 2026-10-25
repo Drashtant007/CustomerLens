@@ -1,4 +1,4 @@
-# ============================================
+﻿# ============================================
 # CustomerLens - Git Ignore
 # ============================================
 
@@ -20,6 +20,10 @@ env/
 # Streamlit
 .streamlit/
 
+# Node / Frontend
+node_modules/
+dist/
+
 # IDE
 .vscode/
 .idea/
@@ -34,3 +38,8 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
